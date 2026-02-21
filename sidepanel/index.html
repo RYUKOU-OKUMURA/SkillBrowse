@@ -4,254 +4,455 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>SkillBrowse</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:ital,wght@0,300;0,400;1,300&display=swap" rel="stylesheet">
   <style>
+    :root {
+      --bg:           #080808;
+      --surface:      #0e0e0e;
+      --border:       #1a1a1a;
+      --border-soft:  #111111;
+      --text:         #d8d4cc;
+      --text-dim:     #4a4a46;
+      --text-muted:   #2a2a28;
+      --accent:       #d4a042;
+      --accent-dim:   rgba(212, 160, 66, 0.08);
+      --accent-glow:  rgba(212, 160, 66, 0.15);
+      --assistant:    #7a7870;
+    }
+
     * { box-sizing: border-box; margin: 0; padding: 0; }
 
     body {
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-      background: #0f0f11;
-      color: #e8e8ec;
+      font-family: 'IBM Plex Sans', sans-serif;
+      font-weight: 300;
+      background: var(--bg);
+      color: var(--text);
       height: 100vh;
       display: flex;
       flex-direction: column;
+      overflow: hidden;
+      font-size: 13px;
+      line-height: 1.65;
+      -webkit-font-smoothing: antialiased;
     }
 
-    /* ヘッダー */
+    /* ── Header ── */
     header {
       display: flex;
       align-items: center;
       justify-content: space-between;
-      padding: 12px 16px;
-      border-bottom: 1px solid #1e1e24;
-      background: #0f0f11;
+      padding: 13px 16px 11px;
+      border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
     }
-    .logo { font-size: 15px; font-weight: 700; color: #7c6af7; letter-spacing: 0.02em; }
-    .header-actions { display: flex; gap: 8px; }
+
+    .logo {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 10px;
+      font-weight: 500;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: var(--text);
+      display: flex;
+      align-items: center;
+      gap: 9px;
+    }
+
+    .logo-dot {
+      width: 5px;
+      height: 5px;
+      background: var(--accent);
+      border-radius: 50%;
+      flex-shrink: 0;
+      box-shadow: 0 0 6px var(--accent-glow);
+    }
+
+    .header-actions {
+      display: flex;
+      gap: 1px;
+    }
+
     .icon-btn {
-      background: none; border: none; cursor: pointer;
-      color: #666; font-size: 16px; padding: 4px; border-radius: 6px;
-    }
-    .icon-btn:hover { color: #ccc; background: #1e1e24; }
-
-    /* スキル選択 */
-    .skill-bar {
-      padding: 8px 16px;
-      border-bottom: 1px solid #1e1e24;
-      display: flex;
-      gap: 6px;
-      overflow-x: auto;
-      scrollbar-width: none;
-    }
-    .skill-bar::-webkit-scrollbar { display: none; }
-    .skill-chip {
-      flex-shrink: 0;
-      padding: 4px 10px;
-      border-radius: 20px;
-      font-size: 12px;
-      cursor: pointer;
-      border: 1px solid #2a2a32;
-      background: #1a1a22;
-      color: #999;
-      transition: all 0.15s;
-    }
-    .skill-chip:hover { border-color: #7c6af7; color: #ccc; }
-    .skill-chip.active { background: #7c6af7; border-color: #7c6af7; color: #fff; }
-
-    /* チャットエリア */
-    #chat {
-      flex: 1;
-      overflow-y: auto;
-      padding: 16px;
-      display: flex;
-      flex-direction: column;
-      gap: 12px;
-    }
-
-    .message {
-      max-width: 90%;
-      padding: 10px 14px;
-      border-radius: 12px;
-      font-size: 13.5px;
-      line-height: 1.6;
-      white-space: pre-wrap;
-      word-break: break-word;
-    }
-    .message.user {
-      align-self: flex-end;
-      background: #7c6af7;
-      color: #fff;
-      border-bottom-right-radius: 4px;
-    }
-    .message.assistant {
-      align-self: flex-start;
-      background: #1a1a22;
-      color: #e0e0e8;
-      border-bottom-left-radius: 4px;
-    }
-    .message.system {
-      align-self: center;
-      background: transparent;
-      color: #555;
-      font-size: 12px;
-      text-align: center;
-    }
-
-    /* タイピングインジケーター */
-    .typing { display: flex; gap: 4px; align-items: center; padding: 12px 14px; }
-    .typing span {
-      width: 6px; height: 6px; border-radius: 50%; background: #555;
-      animation: bounce 1.2s infinite;
-    }
-    .typing span:nth-child(2) { animation-delay: 0.2s; }
-    .typing span:nth-child(3) { animation-delay: 0.4s; }
-    @keyframes bounce {
-      0%, 80%, 100% { transform: translateY(0); }
-      40% { transform: translateY(-6px); }
-    }
-
-    /* 入力エリア */
-    .input-area {
-      padding: 12px 16px;
-      border-top: 1px solid #1e1e24;
-      display: flex;
-      gap: 8px;
-      align-items: flex-end;
-      background: #0f0f11;
-    }
-    .context-toggle {
-      flex-shrink: 0;
-      background: #1a1a22;
-      border: 1px solid #2a2a32;
-      border-radius: 8px;
-      color: #666;
-      font-size: 12px;
-      padding: 6px 8px;
-      cursor: pointer;
-      white-space: nowrap;
-    }
-    .context-toggle.on { color: #7c6af7; border-color: #7c6af7; }
-    textarea {
-      flex: 1;
-      background: #1a1a22;
-      border: 1px solid #2a2a32;
-      border-radius: 10px;
-      color: #e0e0e8;
-      font-size: 13.5px;
-      padding: 8px 12px;
-      resize: none;
-      min-height: 38px;
-      max-height: 120px;
-      outline: none;
-      font-family: inherit;
-      line-height: 1.5;
-    }
-    textarea:focus { border-color: #7c6af7; }
-    #send-btn {
-      flex-shrink: 0;
-      background: #7c6af7;
+      background: none;
       border: none;
-      border-radius: 8px;
-      color: #fff;
-      font-size: 16px;
-      width: 36px;
-      height: 36px;
       cursor: pointer;
+      color: var(--text-dim);
+      padding: 5px 6px;
+      border-radius: 3px;
+      transition: color 0.12s, background 0.12s;
       display: flex;
       align-items: center;
       justify-content: center;
-      transition: background 0.15s;
     }
-    #send-btn:hover { background: #6a5ae0; }
-    #send-btn:disabled { background: #2a2a32; color: #555; cursor: not-allowed; }
 
-    /* 設定パネル */
+    .icon-btn:hover {
+      color: var(--text);
+      background: var(--surface);
+    }
+
+    /* ── Settings Panel ── */
     #settings-panel {
       display: none;
-      padding: 16px;
-      background: #13131a;
-      border-bottom: 1px solid #1e1e24;
-    }
-    #settings-panel.open { display: block; }
-    .settings-row { margin-bottom: 12px; }
-    .settings-row label { display: block; font-size: 12px; color: #888; margin-bottom: 4px; }
-    .settings-row input {
-      width: 100%;
-      background: #1a1a22;
-      border: 1px solid #2a2a32;
-      border-radius: 8px;
-      color: #e0e0e8;
-      font-size: 13px;
-      padding: 8px 10px;
-      outline: none;
-    }
-    .settings-row input:focus { border-color: #7c6af7; }
-    .settings-row select {
-      width: 100%;
-      background: #1a1a22;
-      border: 1px solid #2a2a32;
-      border-radius: 8px;
-      color: #e0e0e8;
-      font-size: 13px;
-      padding: 8px 10px;
-      outline: none;
-      cursor: pointer;
-      appearance: none;
-    }
-    .settings-row select:focus { border-color: #7c6af7; }
-    .save-btn {
-      background: #7c6af7;
-      border: none;
-      border-radius: 8px;
-      color: #fff;
-      font-size: 13px;
-      padding: 8px 16px;
-      cursor: pointer;
-      width: 100%;
+      padding: 14px 16px;
+      border-bottom: 1px solid var(--border);
+      background: var(--surface);
+      flex-shrink: 0;
     }
 
-    /* スラッシュコマンドメニュー */
-    .input-wrapper {
+    #settings-panel.open { display: block; }
+
+    .settings-row {
+      margin-bottom: 11px;
+    }
+
+    .settings-row label {
+      display: block;
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 8.5px;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: var(--text-dim);
+      margin-bottom: 5px;
+    }
+
+    .settings-row input,
+    .settings-row select {
+      width: 100%;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 2px;
+      color: var(--text);
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 11px;
+      padding: 7px 9px;
+      outline: none;
+      appearance: none;
+      cursor: pointer;
+      transition: border-color 0.12s;
+    }
+
+    .settings-row input:focus,
+    .settings-row select:focus {
+      border-color: var(--accent);
+    }
+
+    .settings-row input::placeholder {
+      color: var(--text-muted);
+    }
+
+    .save-btn {
+      width: 100%;
+      margin-top: 4px;
+      padding: 7px 0;
+      background: var(--accent);
+      border: none;
+      border-radius: 2px;
+      color: #000;
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 9px;
+      font-weight: 500;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      cursor: pointer;
+      transition: opacity 0.12s;
+    }
+
+    .save-btn:hover { opacity: 0.82; }
+
+    /* ── Skill Bar ── */
+    .skill-bar {
+      display: flex;
+      overflow-x: auto;
+      scrollbar-width: none;
+      border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+      padding: 0 14px;
+    }
+
+    .skill-bar::-webkit-scrollbar { display: none; }
+
+    .skill-chip {
+      flex-shrink: 0;
+      background: none;
+      border: none;
+      border-bottom: 1.5px solid transparent;
+      color: var(--text-dim);
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 9.5px;
+      letter-spacing: 0.08em;
+      padding: 9px 9px 7px;
+      cursor: pointer;
+      transition: color 0.12s, border-color 0.12s;
+      white-space: nowrap;
+      margin-bottom: -1px;
+    }
+
+    .skill-chip:hover { color: var(--text); }
+
+    .skill-chip.active {
+      color: var(--accent);
+      border-bottom-color: var(--accent);
+    }
+
+    /* ── Chat Area ── */
+    #chat {
       flex: 1;
+      overflow-y: auto;
+      padding: 0 16px;
+      display: flex;
+      flex-direction: column;
+      scrollbar-width: thin;
+      scrollbar-color: var(--border) transparent;
+    }
+
+    #chat::-webkit-scrollbar { width: 2px; }
+    #chat::-webkit-scrollbar-thumb { background: var(--border); }
+
+    .message {
+      font-size: 13px;
+      line-height: 1.7;
+      white-space: pre-wrap;
+      word-break: break-word;
+      padding: 14px 0;
+      border-bottom: 1px solid var(--border-soft);
+    }
+
+    .message:last-child { border-bottom: none; }
+
+    /* User message — amber left bar */
+    .message.user {
+      color: var(--text);
+      font-weight: 400;
+      padding-left: 13px;
       position: relative;
     }
+
+    .message.user::before {
+      content: '';
+      position: absolute;
+      left: 0;
+      top: 16px;
+      bottom: 16px;
+      width: 1.5px;
+      background: var(--accent);
+      border-radius: 1px;
+    }
+
+    /* Assistant message — muted prose */
+    .message.assistant {
+      color: var(--assistant);
+      font-weight: 300;
+      font-style: italic;
+    }
+
+    /* System message — tiny monospace label */
+    .message.system {
+      color: var(--text-muted);
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 9px;
+      letter-spacing: 0.08em;
+      padding: 10px 0;
+      border-bottom: none;
+    }
+
+    /* ── Typing Indicator ── */
+    .typing {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      padding: 18px 0;
+    }
+
+    .typing span {
+      width: 3px;
+      height: 3px;
+      border-radius: 50%;
+      background: var(--accent);
+      animation: pulse 1.5s ease-in-out infinite;
+      opacity: 0.3;
+    }
+
+    .typing span:nth-child(2) { animation-delay: 0.25s; }
+    .typing span:nth-child(3) { animation-delay: 0.5s; }
+
+    @keyframes pulse {
+      0%, 80%, 100% { opacity: 0.3; transform: scale(1); }
+      40% { opacity: 1; transform: scale(1.5); }
+    }
+
+    /* ── Input Area ── */
+    .input-area {
+      border-top: 1px solid var(--border);
+      background: var(--bg);
+      flex-shrink: 0;
+      padding: 10px 16px 13px;
+      display: flex;
+      flex-direction: column;
+      gap: 9px;
+    }
+
+    .input-wrapper {
+      position: relative;
+    }
+
+    textarea {
+      width: 100%;
+      background: none;
+      border: none;
+      border-bottom: 1px solid var(--border);
+      color: var(--text);
+      font-family: 'IBM Plex Sans', sans-serif;
+      font-weight: 300;
+      font-size: 13px;
+      padding: 3px 0 9px;
+      resize: none;
+      outline: none;
+      min-height: 26px;
+      max-height: 100px;
+      line-height: 1.65;
+      transition: border-color 0.12s;
+    }
+
+    textarea:focus { border-bottom-color: var(--accent); }
+
+    textarea::placeholder {
+      color: var(--text-muted);
+      font-size: 12px;
+    }
+
+    .input-controls {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .context-toggle {
+      background: none;
+      border: 1px solid var(--border);
+      border-radius: 2px;
+      color: var(--text-dim);
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 8.5px;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      padding: 3px 7px 2px;
+      cursor: pointer;
+      transition: all 0.12s;
+    }
+
+    .context-toggle.on {
+      color: var(--accent);
+      border-color: var(--accent);
+      background: var(--accent-dim);
+    }
+
+    #send-btn {
+      background: none;
+      border: 1px solid var(--border);
+      border-radius: 2px;
+      color: var(--text-dim);
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 8.5px;
+      letter-spacing: 0.08em;
+      padding: 3px 9px 2px;
+      cursor: pointer;
+      transition: all 0.12s;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+
+    #send-btn:hover:not(:disabled) {
+      color: var(--accent);
+      border-color: var(--accent);
+      background: var(--accent-dim);
+    }
+
+    #send-btn:disabled {
+      opacity: 0.25;
+      cursor: not-allowed;
+    }
+
+    /* ── Slash Command Menu ── */
     #slash-menu {
       display: none;
       position: absolute;
-      bottom: calc(100% + 6px);
-      left: 0; right: 0;
-      background: #1a1a22;
-      border: 1px solid #2a2a32;
-      border-radius: 10px;
+      bottom: calc(100% + 8px);
+      left: 0;
+      right: 0;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 3px;
       overflow: hidden;
-      box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+      box-shadow: 0 8px 40px rgba(0, 0, 0, 0.7);
       z-index: 100;
     }
+
     #slash-menu.open { display: block; }
+
+    .slash-menu-header {
+      padding: 7px 11px 5px;
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 8px;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      border-bottom: 1px solid var(--border-soft);
+    }
+
     .slash-item {
       display: flex;
-      align-items: center;
-      gap: 8px;
-      padding: 8px 12px;
+      align-items: baseline;
+      gap: 12px;
+      padding: 8px 11px;
       cursor: pointer;
-      font-size: 13px;
+      transition: background 0.08s;
     }
-    .slash-item:hover, .slash-item.active { background: #26263a; }
-    .slash-name { color: #7c6af7; font-weight: 600; font-family: monospace; }
-    .slash-label { color: #888; font-size: 12px; }
 
-    /* 入力エリアのtextareaをwrapper内に */
-    .input-area textarea {
-      width: 100%;
+    .slash-item:hover,
+    .slash-item.active {
+      background: var(--accent-dim);
+    }
+
+    .slash-name {
+      font-family: 'IBM Plex Mono', monospace;
+      font-size: 11px;
+      color: var(--accent);
+      font-weight: 500;
+      min-width: 110px;
+    }
+
+    .slash-label {
+      font-size: 11px;
+      color: var(--text-dim);
+      font-weight: 300;
     }
   </style>
 </head>
 <body>
 
 <header>
-  <span class="logo">⚡ SkillBrowse</span>
+  <span class="logo">
+    <span class="logo-dot"></span>
+    SkillBrowse
+  </span>
   <div class="header-actions">
-    <button class="icon-btn" id="settings-btn" title="設定">⚙️</button>
-    <button class="icon-btn" id="clear-btn" title="チャットをクリア">🗑️</button>
+    <button class="icon-btn" id="settings-btn" title="設定">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="12" r="3"/>
+        <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+      </svg>
+    </button>
+    <button class="icon-btn" id="clear-btn" title="クリア">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+        <polyline points="3 6 5 6 21 6"/>
+        <path d="M19 6l-1 14H6L5 6"/>
+        <path d="M10 11v6M14 11v6"/>
+        <path d="M9 6V4h6v2"/>
+      </svg>
+    </button>
   </div>
 </header>
 
@@ -259,16 +460,16 @@
 <div id="settings-panel">
   <div class="settings-row">
     <label>Z.ai API Key</label>
-    <input type="password" id="api-key-input" placeholder="sk-..." />
+    <input type="password" id="api-key-input" placeholder="enter api key" />
   </div>
   <div class="settings-row">
-    <label>送信ショートカット</label>
+    <label>Send Shortcut</label>
     <select id="shortcut-select">
       <option value="shift+enter">Shift + Enter</option>
       <option value="cmd+enter">⌘ / Ctrl + Enter</option>
     </select>
   </div>
-  <button class="save-btn" id="save-settings">保存</button>
+  <button class="save-btn" id="save-settings">Save</button>
 </div>
 
 <!-- スキル選択 -->
@@ -278,18 +479,25 @@
 
 <!-- チャット -->
 <div id="chat">
-  <div class="message system">SkillBrowse へようこそ。<br>ページについて何でも聞いてください。</div>
+  <div class="message system">ready — type / to select a skill</div>
 </div>
 
 <!-- 入力エリア -->
 <div class="input-area">
-  <button class="context-toggle on" id="context-toggle" title="ページ情報を含める">📄 ページ</button>
   <div class="input-wrapper">
-    <!-- スラッシュコマンドメニュー -->
     <div id="slash-menu"></div>
-    <textarea id="input" placeholder="メッセージを入力… (/ でスキル選択)" rows="1"></textarea>
+    <textarea id="input" placeholder="message..." rows="1"></textarea>
   </div>
-  <button id="send-btn" title="送信 (Shift+Enter)">➤</button>
+  <div class="input-controls">
+    <button class="context-toggle on" id="context-toggle">page ctx</button>
+    <button id="send-btn" title="送信 (Shift+Enter)">
+      send
+      <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+        <line x1="5" y1="12" x2="19" y2="12"/>
+        <polyline points="12 5 19 12 12 19"/>
+      </svg>
+    </button>
+  </div>
 </div>
 
 <script src="sidepanel.js"></script>

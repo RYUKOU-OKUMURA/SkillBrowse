@@ -103,7 +103,7 @@ function updateSendBtnTitle() {
 contextToggle.addEventListener('click', () => {
   includePageContext = !includePageContext;
   contextToggle.classList.toggle('on', includePageContext);
-  contextToggle.textContent = includePageContext ? '📄 ページ' : '📄 OFF';
+  contextToggle.textContent = includePageContext ? 'page ctx' : 'page off';
 });
 
 // ---- クリア ----
@@ -111,7 +111,7 @@ clearBtn.addEventListener('click', () => {
   messages = [];
   activeSkill = null;
   document.querySelectorAll('.skill-chip').forEach((c) => c.classList.remove('active'));
-  chatEl.innerHTML = '<div class="message system">チャットをクリアしました。</div>';
+  chatEl.innerHTML = '<div class="message system">cleared</div>';
 });
 
 // ---- スラッシュコマンド ----
@@ -148,6 +148,12 @@ function handleSlashInput() {
 function renderSlashMenu(skills) {
   slashMenu.innerHTML = '';
   slashMenuIndex = 0;
+
+  // ヘッダー
+  const header = document.createElement('div');
+  header.className = 'slash-menu-header';
+  header.textContent = 'skills';
+  slashMenu.appendChild(header);
 
   skills.forEach((skill, i) => {
     const item = document.createElement('div');
