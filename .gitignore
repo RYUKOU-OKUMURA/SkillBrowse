@@ -1,0 +1,23 @@
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Node
+node_modules/
+npm-debug.log*
+
+# 環境設定（APIキーを含む可能性があるファイル）
+.env
+.env.local
+*.local
+
+# エディタ
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# ビルド成果物
+dist/
+build/

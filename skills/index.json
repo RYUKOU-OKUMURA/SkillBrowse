@@ -1,0 +1,28 @@
+{
+  "skills": [
+    {
+      "name": "default",
+      "label": "汎用アシスタント",
+      "description": "何でも対応する基本スキル",
+      "triggers": []
+    },
+    {
+      "name": "summarizer",
+      "label": "ページ要約",
+      "description": "現在のページを要約します",
+      "triggers": ["要約", "まとめ", "サマリー", "summarize"]
+    },
+    {
+      "name": "form-filler",
+      "label": "フォーム入力",
+      "description": "フォームへの自動入力を支援します",
+      "triggers": ["フォーム", "入力して", "記入", "fill"]
+    },
+    {
+      "name": "page-analyst",
+      "label": "ページ分析",
+      "description": "ページの構造や内容を詳しく分析します",
+      "triggers": ["分析", "調べて", "解析", "analyze"]
+    }
+  ]
+}
