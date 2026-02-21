@@ -12,6 +12,42 @@ chrome.action.onClicked.addListener((tab) => {
   chrome.sidePanel.open({ tabId: tab.id });
 });
 
+// ストリーミング用 Port 接続（サイドパネルからの長期接続）
+chrome.runtime.onConnect.addListener((port) => {
+  if (port.name !== 'skillbrowse-stream') return;
+
+  port.onMessage.addListener(async (msg) => {
+    if (msg.type !== 'STREAM_CHAT') return;
+
+    const { messages, userInput, skillName, pageContext } = msg.payload;
+
+    const skill = skillName
+      ? await skillManager.loadSkill(skillName)
+      : await skillManager.detectAndLoad(userInput);
+
+    let systemPrompt = skill.systemPrompt;
+    if (pageContext) {
+      systemPrompt += `\n\n---\n## 現在のページ情報\n${pageContext}`;
+    }
+
+    zaiClient.chatStream({
+      messages,
+      systemPrompt,
+      tools: skill.tools || [],
+      onToolCall: (toolName, args) => handleToolCall(toolName, args),
+      onChunk: (text) => {
+        try { port.postMessage({ type: 'CHUNK', text }); } catch {}
+      },
+      onDone: (content) => {
+        try { port.postMessage({ type: 'DONE', content }); } catch {}
+      },
+      onError: (err) => {
+        try { port.postMessage({ type: 'ERROR', error: err.message }); } catch {}
+      },
+    });
+  });
+});
+
 // サイドパネル・コンテンツスクリプトからのメッセージを処理
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message.type === 'CHAT') {

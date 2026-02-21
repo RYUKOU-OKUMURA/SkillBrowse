@@ -100,6 +100,136 @@ export class ZAIClient {
     };
   }
 
+  // ストリーミング版chat。onChunk(text)でトークンを随時返し、onDone(fullText)で完了通知
+  async chatStream({ messages, systemPrompt, tools = [], onToolCall, onChunk, onDone, onError, _iteration = 0 }) {
+    await this._ready;
+
+    if (!this.apiKey) {
+      onError(new Error('API key not set. Please configure in settings.'));
+      return;
+    }
+
+    const body = {
+      model: MODEL,
+      messages: [
+        { role: 'system', content: systemPrompt },
+        ...messages,
+      ],
+      stream: true,
+    };
+
+    if (tools.length > 0) {
+      body.tools = tools.map((t) => ({ type: 'function', function: t }));
+      body.tool_choice = 'auto';
+    }
+
+    let response;
+    try {
+      response = await fetch(`${ZAI_BASE_URL}/chat/completions`, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${this.apiKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(body),
+      });
+    } catch (err) {
+      onError(err);
+      return;
+    }
+
+    if (!response.ok) {
+      const errText = await response.text();
+      onError(new Error(`Z.ai API error: ${response.status} ${errText}`));
+      return;
+    }
+
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = '';
+    let fullContent = '';
+    let toolCallsMap = {};  // index -> accumulated tool call
+
+    try {
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split('\n');
+        buffer = lines.pop(); // 未完了行はバッファに残す
+
+        for (const line of lines) {
+          if (!line.startsWith('data: ')) continue;
+          const data = line.slice(6).trim();
+          if (data === '[DONE]') continue;
+
+          let json;
+          try { json = JSON.parse(data); } catch { continue; }
+
+          const delta = json.choices?.[0]?.delta;
+          if (!delta) continue;
+
+          // テキストチャンクを通知
+          if (delta.content) {
+            fullContent += delta.content;
+            onChunk(delta.content);
+          }
+
+          // tool_callsチャンクを蓄積
+          if (delta.tool_calls) {
+            for (const tc of delta.tool_calls) {
+              if (!toolCallsMap[tc.index]) {
+                toolCallsMap[tc.index] = { id: '', function: { name: '', arguments: '' } };
+              }
+              if (tc.id) toolCallsMap[tc.index].id = tc.id;
+              if (tc.function?.name) toolCallsMap[tc.index].function.name += tc.function.name;
+              if (tc.function?.arguments) toolCallsMap[tc.index].function.arguments += tc.function.arguments;
+            }
+          }
+        }
+      }
+    } catch (err) {
+      onError(err);
+      return;
+    }
+
+    // ツール呼び出しがあれば実行して再帰
+    const toolCallsList = Object.values(toolCallsMap);
+    if (toolCallsList.length > 0 && onToolCall) {
+      if (_iteration >= MAX_TOOL_ITERATIONS) {
+        onDone(fullContent || '（ツール呼び出しの上限に達しました）');
+        return;
+      }
+
+      let toolResults;
+      try {
+        toolResults = await Promise.all(
+          toolCallsList.map(async (tc) => {
+            const args = JSON.parse(tc.function.arguments || '{}');
+            const result = await onToolCall(tc.function.name, args);
+            return { role: 'tool', tool_call_id: tc.id, content: JSON.stringify(result) };
+          })
+        );
+      } catch (err) {
+        onError(err);
+        return;
+      }
+
+      return this.chatStream({
+        messages: [
+          ...messages,
+          { role: 'assistant', content: fullContent || null, tool_calls: toolCallsList },
+          ...toolResults,
+        ],
+        systemPrompt, tools, onToolCall, onChunk, onDone, onError,
+        _iteration: _iteration + 1,
+      });
+    }
+
+    onDone(fullContent);
+  }
+
   async setApiKey(key) {
     this.apiKey = key;
     await chrome.storage.local.set({ zai_api_key: key });

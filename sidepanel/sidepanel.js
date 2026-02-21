@@ -240,7 +240,7 @@ function updateSlashMenuActive(items) {
 
 sendBtn.addEventListener('click', handleSend);
 
-// ---- 送信処理 ----
+// ---- 送信処理（ストリーミング対応） ----
 async function handleSend() {
   const text = inputEl.value.trim();
   if (!text) return;
@@ -255,35 +255,61 @@ async function handleSend() {
 
   const typing = addTypingIndicator();
 
+  // ページコンテキスト取得
   let pageContext = null;
   if (includePageContext) {
     pageContext = await sendToBackground({ type: 'GET_PAGE_CONTENT' });
   }
 
-  try {
-    const response = await sendToBackground({
-      type: 'CHAT',
-      payload: {
-        messages,
-        userInput: text,
-        skillName: activeSkill?.name || null,
-        pageContext: pageContext
-          ? `タイトル: ${pageContext.title}\nURL: ${pageContext.url}\n\n${pageContext.text}`
-          : null,
-      },
-    });
+  const payload = {
+    messages,
+    userInput: text,
+    skillName: activeSkill?.name || null,
+    pageContext: pageContext
+      ? `タイトル: ${pageContext.title}\nURL: ${pageContext.url}\n\n${pageContext.text}`
+      : null,
+  };
 
-    typing.remove();
-    const assistantText = response.content || '（応答なし）';
-    addMessage('assistant', assistantText);
-    messages.push({ role: 'assistant', content: assistantText });
-  } catch (err) {
-    typing.remove();
-    addMessage('system', `エラー: ${err.message}`);
-  }
+  // Service Worker とストリーミングポートを開く
+  const port = chrome.runtime.connect({ name: 'skillbrowse-stream' });
+  let msgEl = null;
+  let fullContent = '';
 
-  sendBtn.disabled = false;
-  chatEl.scrollTop = chatEl.scrollHeight;
+  port.onMessage.addListener((msg) => {
+    if (msg.type === 'CHUNK') {
+      // 最初のチャンクが届いたらタイピングインジケーターを消してメッセージ表示開始
+      if (!msgEl) {
+        typing.remove();
+        msgEl = addMessage('assistant', '');
+      }
+      fullContent += msg.text;
+      msgEl.textContent = fullContent;
+      chatEl.scrollTop = chatEl.scrollHeight;
+
+    } else if (msg.type === 'DONE') {
+      if (!msgEl) {
+        // チャンクが来なかった場合（tool callのみ等）
+        typing.remove();
+        addMessage('assistant', msg.content || '（応答なし）');
+      }
+      messages.push({ role: 'assistant', content: msg.content || fullContent });
+      sendBtn.disabled = false;
+      port.disconnect();
+
+    } else if (msg.type === 'ERROR') {
+      typing.remove();
+      addMessage('system', `error: ${msg.error}`);
+      sendBtn.disabled = false;
+      port.disconnect();
+    }
+  });
+
+  port.onDisconnect.addListener(() => {
+    // 予期せず切断された場合の保険
+    sendBtn.disabled = false;
+  });
+
+  port.postMessage({ type: 'STREAM_CHAT', payload });
 }
 
 // ---- UI ヘルパー ----
